@@ -9,17 +9,23 @@ const flash = require('connect-flash');
 const path = require('path');
 
 const app = express();
-const PORT = process.env.PORT || 3000;
-const HOST = '0.0.0.0';
 
-app.listen(PORT, HOST, () => {
-  console.log(`🚀 Server running on http://${HOST}:${PORT}`);
-});
-/* ================= DATABASE ================= */
+/* ================= DATABASE CONNECTION ================= */
 
-mongoose.connect(process.env.MONGO_URI)
-  .then(() => console.log("✅ MongoDB Connected"))
-  .catch(err => console.log("❌ MongoDB Connection Error:", err));
+// MongoDB URI from environment variable
+const mongoURI = process.env.MONGO_URI || "mongodb://mongo:27017/capstone";
+
+// Function to connect to MongoDB with retry
+const connectWithRetry = () => {
+  mongoose.connect(mongoURI)
+    .then(() => console.log("✅ MongoDB Connected"))
+    .catch(err => {
+      console.log("❌ MongoDB Connection Error:", err);
+      console.log("Retrying in 5 seconds...");
+      setTimeout(connectWithRetry, 5000); // retry after 5s
+    });
+};
+connectWithRetry();
 
 /* ================= BODY PARSER ================= */
 
@@ -33,24 +39,23 @@ app.use(express.static(path.join(__dirname, 'public')));
 /* ================= SESSION ================= */
 
 app.use(session({
-  secret: process.env.SESSION_SECRET,
+  secret: process.env.SESSION_SECRET || "secretkey",
   resave: false,
   saveUninitialized: false,
   store: MongoStore.create({
-    mongoUrl: process.env.MONGO_URI,
+    mongoUrl: mongoURI,
     collectionName: "sessions"
   }),
   cookie: {
     maxAge: 1000 * 60 * 60 * 24, // 1 day
     httpOnly: true,
-    secure: false // change to true in production with HTTPS
+    secure: false // true if using HTTPS
   }
 }));
 
 /* ================= PASSPORT ================= */
 
 require('./config/passport')(passport);
-
 app.use(passport.initialize());
 app.use(passport.session());
 
@@ -75,9 +80,9 @@ app.set('views', path.join(__dirname, 'views'));
 /* ================= ROUTES ================= */
 
 app.use('/', require('./routes/auth'));
-app.use('/', require('./routes/signup')); // ✅ THIS WAS MISSING
+app.use('/', require('./routes/signup'));
 
-/* ================= 404 ================= */
+/* ================= 404 HANDLER ================= */
 
 app.use((req, res) => {
   res.status(404).render('404');
@@ -90,11 +95,18 @@ app.use((err, req, res, next) => {
   res.status(500).send("Something went wrong!");
 });
 
+/* ================= HEALTH CHECK ================= */
+
 app.get('/health', (req, res) => {
   res.status(200).send('OK');
 });
+
 /* ================= SERVER ================= */
 
-app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
+// Bind to all interfaces so Docker can expose the port
+const PORT = process.env.PORT || 3000;
+const HOST = '0.0.0.0';
+
+app.listen(PORT, HOST, () => {
+  console.log(`🚀 Server running on http://${HOST}:${PORT}`);
 });
