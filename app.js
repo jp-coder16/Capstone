@@ -9,7 +9,12 @@ const flash = require('connect-flash');
 const path = require('path');
 
 const app = express();
+const PORT = process.env.PORT || 3000;
+const HOST = '0.0.0.0';
 
+app.listen(PORT, HOST, () => {
+  console.log(`🚀 Server running on http://${HOST}:${PORT}`);
+});
 /* ================= DATABASE ================= */
 
 mongoose.connect(process.env.MONGO_URI)
@@ -84,12 +89,11 @@ app.use((err, req, res, next) => {
   console.error(err.stack);
   res.status(500).send("Something went wrong!");
 });
+
 app.get('/health', (req, res) => {
   res.status(200).send('OK');
 });
 /* ================= SERVER ================= */
-
-const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
