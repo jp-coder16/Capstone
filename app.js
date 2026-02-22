@@ -84,7 +84,9 @@ app.use((err, req, res, next) => {
   console.error(err.stack);
   res.status(500).send("Something went wrong!");
 });
-
+app.get('/health', (req, res) => {
+  res.status(200).send('OK');
+});
 /* ================= SERVER ================= */
 
 const PORT = process.env.PORT || 3000;
