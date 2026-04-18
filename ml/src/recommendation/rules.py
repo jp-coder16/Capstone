@@ -7,7 +7,7 @@ def get_recommendations(aqi, pm25):
             "workout": "Indoor yoga",
             "tips": [
                 "Stay indoors",
-                "Use air purifier",
+                "Use Air Purifier",
                 "Avoid physical exertion"
             ]
         }
