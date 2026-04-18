@@ -4,7 +4,7 @@ const express = require('express');
 const mongoose = require('mongoose');
 const session = require('express-session');
 const MongoStore = require('connect-mongo');
-const passport = require('passport');
+// const passport = require('passport');
 const flash = require('connect-flash');
 const path = require('path');
 
@@ -23,6 +23,10 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 /* ================= DATABASE CONNECTION ================= */
 const mongoURI = process.env.MONGO_URI || "mongodb://mongo:27017/capstone";
+
+// ADD THIS
+const aqiRoutes = require("./routes/aqiRoutes");
+app.use("/api", aqiRoutes);
 
 // Retry connection until MongoDB is ready
 const connectWithRetry = () => {
@@ -54,9 +58,9 @@ app.use(session({
 }));
 
 /* ================= PASSPORT ================= */
-require('./config/passport')(passport);
-app.use(passport.initialize());
-app.use(passport.session());
+// require('./config/passport')(passport);
+// app.use(passport.initialize());
+// app.use(passport.session());
 
 /* ================= FLASH ================= */
 app.use(flash());
