@@ -1,10 +1,10 @@
 def classify_risk(aqi):
     
     if aqi < 100:
-        return "Low"
+        return "Low_AQI"
     
     elif aqi < 200:
-        return "Medium"
+        return "Medium_AQI"
     
     else:
-        return "High"
+        return "High_AQI"
