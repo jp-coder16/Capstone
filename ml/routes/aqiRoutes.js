@@ -1,36 +1,42 @@
 const express = require("express");
-const { exec } = require("child_process");
+const { spawn } = require("child_process");
 
 const router = express.Router();
 
 router.post("/predict", (req, res) => {
-
     const features = req.body.features;
 
     if (!features) {
         return res.status(400).json({ error: "Features missing" });
     }
 
-    const input = JSON.stringify(features);
+    const pythonProcess = spawn("python", [
+        "ml/api.py",
+        JSON.stringify(features)
+    ]);
 
-    const command = `python ml/api.py '${input}'`;
+    let dataString = "";
+    let errorString = "";
 
-    exec(command, (error, stdout, stderr) => {
+    pythonProcess.stdout.on("data", (data) => {
+        dataString += data.toString();
+    });
 
-        if (error) {
-            console.error("Execution error:", error);
+    pythonProcess.stderr.on("data", (data) => {
+        errorString += data.toString();
+    });
+
+    pythonProcess.on("close", (code) => {
+        if (code !== 0) {
+            console.error("Python Error:", errorString);
             return res.status(500).json({ error: "ML execution failed" });
         }
 
-        if (stderr) {
-            console.error("Python error:", stderr);
-        }
-
         try {
-            const result = JSON.parse(stdout);
+            const result = JSON.parse(dataString);
             res.json(result);
         } catch (err) {
-            console.error("Parsing error:", err);
+            console.error("Parse Error:", err, dataString);
             res.status(500).json({ error: "Invalid ML response" });
         }
     });
