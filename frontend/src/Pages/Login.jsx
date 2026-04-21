@@ -1,14 +1,16 @@
 import React, { useState } from "react";
+import "./Login.css";
 import { useNavigate } from "react-router-dom";
 import { loginUser } from "../services/authService";
-import "./Login.css";
+import { GoogleLogin } from "@react-oauth/google";
+import axios from "axios";
 
 function Login() {
   const navigate = useNavigate();
 
   const [form, setForm] = useState({
     username: "",
-    password: "",
+    password: ""
   });
 
   const [loading, setLoading] = useState(false);
@@ -17,6 +19,7 @@ function Login() {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
+  // 🔹 LOGIN
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -24,27 +27,58 @@ function Login() {
     try {
       const res = await loginUser(form);
 
+      // ✅ Save token + user
       localStorage.setItem("token", res.data.token);
       localStorage.setItem("user", JSON.stringify(res.data.user));
 
+      // ✅ Redirect AFTER login
       navigate("/home");
+
     } catch (err) {
-      alert(err.response?.data?.msg || "Login failed");
+      console.log(err);
+
+      if (err.response?.data?.msg === "Please verify your email before login") {
+        alert("⚠️ Please verify your email first");
+      } else {
+        alert(err.response?.data?.msg || "Login failed");
+      }
     }
 
     setLoading(false);
   };
 
+  // 🔹 GOOGLE LOGIN
+  const handleGoogleSuccess = async (credentialResponse) => {
+    try {
+      const res = await axios.post(
+        "http://localhost:5000/api/auth/google",
+        { token: credentialResponse.credential }
+      );
+
+      // ✅ Save user
+      localStorage.setItem("user", JSON.stringify(res.data.user));
+
+      // ✅ Redirect
+      navigate("/home");
+
+    } catch (err) {
+      console.log(err);
+      alert("Google login failed");
+    }
+  };
+
   return (
     <div className="blur-bg">
       <div className="login-container">
-        <h2>Login</h2>
+
+        <img src="/images/logo.png" alt="logo" className="logo" />
+        <h2>Student Login</h2>
 
         <form onSubmit={handleSubmit}>
           <input
             type="text"
             name="username"
-            placeholder="Email or Username"
+            placeholder="Username"
             required
             onChange={handleChange}
           />
@@ -57,14 +91,28 @@ function Login() {
             onChange={handleChange}
           />
 
-          <button type="submit">
+          <button type="submit" className="login-btn">
             {loading ? "Logging in..." : "Login"}
           </button>
 
+          <div className="divider"><span>OR</span></div>
+
+          <div className="google-wrapper">
+            <GoogleLogin
+              onSuccess={handleGoogleSuccess}
+              onError={() => alert("Google Login Failed")}
+            />
+          </div>
+
+          <p onClick={() => navigate("/forgot-password")} className="link">
+            Forgot Password?
+          </p>
+
           <p onClick={() => navigate("/register")} className="link">
-            New user? Register
+            New User? Register
           </p>
         </form>
+
       </div>
     </div>
   );
