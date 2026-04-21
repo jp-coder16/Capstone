@@ -1,292 +1,112 @@
-🌍 AI-Driven Smart AQI & Hygiene Advisory Platform
+# AirSense AI 🛰️
+### Intelligent Air Quality Monitoring & XGBoost-Powered Forecasting
 
-An intelligent, AI-powered Air Quality Index (AQI) prediction and hygiene advisory system designed for individuals and institutions.
+AirSense AI is a full-stack environmental intelligence platform designed to bridge the gap between raw pollutant data and actionable health insights. By leveraging the MERN stack and a dedicated Python machine learning pipeline, it provides real-time monitoring, 3-day AQI forecasting, and automated health alerts for individuals and institutions.
 
-This platform goes beyond displaying AQI numbers — it delivers actionable intelligence, health risk analysis, workout recommendations, hygiene protocols, explainable AI insights, and institutional decision support.
+---
 
-🎯 Problem Statement
+## 🚀 Core Features
 
-Most AQI dashboards:
+* **Predictive Analytics:** Utilizes an XGBoost Regressor model to forecast AQI levels for the next 72 hours with feature-engineered inputs (PM2.5, NO₂, Weather, etc.).
+* **Explainable AI (XAI):** Integrated SHAP values to visualize which pollutants are most heavily influencing specific predictions.
+* **Multi-Role Dashboards:** Context-aware UI for both individual users and institutions (Schools/Offices) with specific health protocols.
+* **Smart Alerts:** Automated NodeMailer system that triggers high-risk email notifications when predicted AQI exceeds safe thresholds.
+* **Gemini-Powered Assistant:** A conversational AI interface built with Google Gemini 1.5 Flash to answer complex environmental and health questions.
 
-Only display AQI values
+---
 
-Provide generic health advice
+## 🛠️ Technical Architecture
 
-Do not personalize recommendations
+### Tech Stack
+* **Frontend:** React.js, Tailwind CSS, Recharts, Framer Motion.
+* **Backend:** Node.js, Express.js, JWT Authentication, Nodemailer.
+* **Database:** MongoDB Atlas (NoSQL).
+* **ML Engine:** Python (Flask/FastAPI), XGBoost, Scikit-learn, SHAP.
+* **AI Integration:** Google Generative AI (Gemini 1.5 Flash).
 
-Do not assist institutions in decision-making
 
-Lack explainable AI insights
 
-Are not production-ready with DevOps pipelines
+### Project Structure
+```text
+├── backend/            # Express.js Server & Business Logic
+├── frontend/           # React.js Client (Vite)
+├── ml/                 # Python XGBoost Model & Inference API
+└── docker-compose.yml  # Container Orchestration
 
-Knowing AQI is not enough.
-People need clear decisions and actions.
+⚙️ Installation & Setup
+1. Prerequisites
+Node.js (v18+)
 
-🚀 Solution Overview
+Python (v3.9+)
 
-This platform:
+MongoDB Atlas Account
 
-Predicts AQI for the next 1–3 days
+Google Gemini API Key
 
-Classifies health risk (Low / Medium / High)
-
-Recommends workouts (indoor/outdoor)
-
-Suggests hygiene actions (mask type, ventilation, hydration)
-
-Provides dashboards for individuals and institutions
-
-Integrates a chatbot for AQI-related guidance
-
-Uses Explainable AI (SHAP)
-
-Implements DevOps deployment
-
-Secures APIs using cybersecurity best practices
-
-🏗 System Architecture
-Public AQI API / CSV / IoT Simulator
-            ↓
-     Data Ingestion Service
-            ↓
-      Data Preprocessing
-            ↓
-     ML Prediction Service
- (LSTM + Random Forest + XGBoost)
-            ↓
-          XAI Layer
-            ↓
-   Recommendation Engine
-            ↓
-        REST API
-            ↓
- Web App | Android App | TV UI
-            ↓
-        Chatbot Service
-            ↓
-     Auth + Security Layer
-            ↓
-      DevOps CI/CD
-👤 Features
-🔹 Individual Dashboard
-
-Real-time AQI
-
-AQI Forecast (1–3 days)
-
-Health Risk Meter
-
-“Can I go outside today?” Indicator
-
-Workout Recommendations
-
-Indoor yoga
-
-Breathing exercises
-
-Outdoor allowed/not allowed
-
-Hygiene Recommendations
-
-Mask type
-
-Ventilation advice
-
-Hydration reminder
-
-Pollution Exposure Score
-
-AI Chatbot
-
-🏫 Institution Dashboard
-
-Area AQI + Forecast
-
-Risk level for staff/students
-
-Outdoor sports recommendation
-
-Assembly decision support
-
-Safety protocol suggestions
-
-Emergency alert system
-
-Admin panel
-
-TV display mode
-
-🤖 AI & Data Science Stack
-📊 Input Features
-
-PM2.5
-
-PM10
-
-NO₂
-
-SO₂
-
-CO
-
-O₃
-
-Temperature
-
-Humidity
-
-Wind Speed
-
-Rainfall
-
-Day/Month/Season
-
-🧠 Models Used
-Task	Model
-AQI Prediction	LSTM / BiLSTM
-Risk Classification	Random Forest / XGBoost
-Recommendation Engine	Hybrid ML + Rule-based
-Explainability	SHAP
-
-Example XAI Output:
-
-"PM2.5 contributed 48% to today's high AQI prediction."
-
-🗂 Dataset Strategy
-
-Public AQI datasets (Delhi / Rajasthan / Alwar)
-
-Weather data integration
-
-Daily time-series dataset
-
-Train/Test split
-
-CSV storage format
-
-Example Schema:
-
-date, pm25, pm10, no2, so2, co, o3, temp, humidity, wind, aqi
-🛠 Tech Stack
-🔹 Frontend
-
-React.js / Next.js
-
-Tailwind CSS
-
-Chart.js / Recharts
-
-🔹 Backend
-
-Node.js
-
-Express.js
-
-MongoDB
-
-Mongoose
-
-🔹 AI Layer
-
-Python
-
-TensorFlow / Keras
-
-Scikit-learn
-
-SHAP
-
-🔹 DevOps
-
-GitHub
-
-Docker
-
-CI/CD Pipeline
-
-Cloud Deployment
-
-🔹 Security
-
-JWT Authentication
-
-Role-Based Access Control
-
-HTTPS
-
-Rate Limiting
-
-Secure API Design
-
-🔐 Security Features
-
-JWT-based authentication
-
-Role-based authorization (Admin/User)
-
-Secure credential storage
-
-Rate limiting
-
-Input validation
-
-Secure API routes
-
-HTTPS encryption
-
-📦 Installation
-1️⃣ Clone Repository
-git clone https://github.com/yourusername/aqi-smart-platform.git
-cd aqi-smart-platform
-2️⃣ Backend Setup
+2. Backend Setup
+Bash
 cd backend
 npm install
-npm start
-3️⃣ Frontend Setup
+# Create a .env file with:
+# MONGO_URI, JWT_SECRET, GEMINI_API_KEY, EMAIL_USER, EMAIL_PASS
+npm run dev
+
+3. Frontend Setup
+Bash
 cd frontend
 npm install
 npm run dev
-4️⃣ Run AI Service
-cd ai-service
+
+4. ML Server Setup
+Bash
+cd ml
 pip install -r requirements.txt
-python app.py
-🐳 Docker Setup
-docker build -t aqi-backend .
-docker build -t aqi-frontend .
-docker-compose up
-📊 Future Enhancements
+uvicorn app:app --host 0.0.0.0 --port 8000 --reload
 
-Real-time IoT sensor integration
 
-Government API integration
 
-Push notifications
+🔑 Environment Variables
+To run this project, you will need to add the following variables to your .env files:
 
-Advanced deep learning ensemble
+Backend (/backend/.env):
 
-Mobile app (Flutter / React Native)
+MONGO_URI - MongoDB connection string
 
-Multi-city deployment
+JWT_SECRET - Secret key for token signing
 
-🎓 Why This Project Stands Out
+GEMINI_API_KEY - Google AI Studio key
 
-✔ AI + Time Series Forecasting
-✔ Explainable AI
-✔ Real-world health impact
-✔ DevOps-ready deployment
-✔ Cybersecurity integration
-✔ Institutional decision support
+EMAIL_USER - SMTP sender email
 
-This is not just a dashboard.
-It is a decision intelligence platform.
+EMAIL_PASS - SMTP app password
 
-👨‍💻 Author
+GOOGLE_CLIENT_ID - For Google Auth integration
 
-Arpit Yadav
-B.Tech Student
-AI | Full Stack | DevOps | Data Science
+ML Server (/ml/.env):
 
-GitHub: https://github.com/arpityadav526
+MODEL_PATH - Path to serialized XGBoost model
 
-LinkedIn: www.linkedin.com/in/arpit-yadav-63b2b6293
+PORT - Default is 5000
+
+📊 Machine Learning Model Details
+The forecasting engine uses an XGBoost Regressor trained on historical environmental datasets.
+
+Features: PM2.5, PM10, NO₂, SO₂, CO, O₃, Temperature, Humidity.
+
+Explainability: Every prediction includes a SHAP (SHapley Additive exPlanations) breakdown to show the impact of each pollutant on the final AQI score.
+
+Evaluation: The model currently achieves an R² score of ~0.94 on test data.
+
+👥 Team 4 (Capstone Project)
+Jayant Pachori - Full Stack Lead
+
+Arnav Tongia - ML & Data Engineering
+
+Abhay Singh - Backend & Security
+
+Manas Uday Wani - UI/UX & Frontend
+
+Arpit Yadav - DevOps & QA
+
+📄 License
+This project is licensed under the MIT License - see the LICENSE file for details.
