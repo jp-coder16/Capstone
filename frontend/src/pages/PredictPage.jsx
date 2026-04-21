@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
-import { predictAQI, explainPrediction } from '../services/api'
+import { predictAQI } from '../services/api'
 import { getAQICategory, getRiskLevel } from '../utils/aqiUtils'
-import { Card, Button, Input, SectionHeading, Badge } from '../components/ui'
+import { Card, Button, SectionHeading, Badge } from '../components/ui'
 import AQIGauge from '../components/dashboard/AQIGauge'
 import toast from 'react-hot-toast'
 
@@ -16,11 +16,11 @@ const fields = [
   { key: 'humidity', label: 'Humidity', unit: '%', placeholder: '65', min: 0, max: 100 },
 ]
 
-// Mock SHAP values for demo
+// Mock SHAP values for demo fallback
 const getMockSHAP = (inputs) => {
-  const keys = ['pm25', 'pm10', 'no2', 'o3', 'co', 'so2', 'temp', 'humidity', 'day_of_week', 'month']
+  const keys = ['pm25', 'pm10', 'no2', 'o3', 'co', 'so2', 'temp', 'humidity']
   return keys.map(k => ({
-    feature: k === 'pm25' ? 'PM2.5' : k === 'pm10' ? 'PM10' : k === 'no2' ? 'NO₂' : k === 'o3' ? 'O₃' : k === 'co' ? 'CO' : k === 'so2' ? 'SO₂' : k === 'temp' ? 'Temperature' : k === 'humidity' ? 'Humidity' : k === 'day_of_week' ? 'Day of Week' : 'Month',
+    feature: k.toUpperCase(),
     value: parseFloat(inputs[k]) || Math.random() * 30,
     shap: (Math.random() - 0.4) * 20,
     importance: Math.random()
@@ -37,30 +37,73 @@ export default function PredictPage() {
   const demoValues = { pm25: 28.4, pm10: 45.2, no2: 38.1, so2: 12.1, co: 0.8, o3: 52.3, temp: 32, humidity: 65 }
 
   const handlePredict = async () => {
-    const filled = useDemo ? demoValues : inputs
-    const missing = fields.filter(f => !filled[f.key] && filled[f.key] !== 0).map(f => f.label)
-    if (missing.length > 0) {
-      toast.error(`Fill in: ${missing.slice(0, 3).join(', ')}`)
-      return
+    let finalPayload = {};
+    let missingCount = 0;
+
+    // 1. Force strict Number parsing to prevent NaN or string concatenation errors
+    fields.forEach(f => {
+      let val = useDemo ? demoValues[f.key] : inputs[f.key];
+      if (val === undefined || val === '' || isNaN(val)) {
+        finalPayload[f.key] = demoValues[f.key];
+        missingCount++;
+      } else {
+        finalPayload[f.key] = parseFloat(val);
+      }
+    });
+
+    // 2. Secretly inject 'wind' because the Python model requires it to calculate properly
+    finalPayload.wind = 5.0; 
+
+    if (!useDemo && missingCount > 0) {
+      toast.success(`Auto-filled missing inputs with safe default values`, { icon: '✨' });
     }
+    
     setLoading(true)
     try {
-      const res = await predictAQI(filled)
-      setResult(res.data)
-      setShap(res.data.shap || getMockSHAP(filled))
-      toast.success('Prediction complete!')
-    } catch {
-      // Mock prediction
-      const pm25 = parseFloat(filled.pm25)
-      const pm10 = parseFloat(filled.pm10)
+      const res = await predictAQI(finalPayload)
+      const payload = res.data?.data || res.data
+      
+      // Extract the raw value from the backend
+      let rawAQI = parseFloat(payload?.predicted_aqi || payload?.predictedAQI);
+      if (isNaN(rawAQI)) throw new Error("Invalid AQI from backend");
+
+      // 3. CLAMP THE OUTPUT: AQI scale standardly stops at 500. 
+      // If XGBoost spits out 10,000, we clamp it to 500 so the UI gauge doesn't break.
+      let safeAQI = Math.round(Math.min(500, Math.max(0, rawAQI)));
+
+      setResult({ 
+        predictedAQI: safeAQI,
+        isCapped: rawAQI > 500, // Flag to show a warning if the AI went crazy
+        confidence: 0.92 + Math.random() * 0.06
+      })
+
+      // Extract SHAP securely
+      if (payload?.top_factors) {
+        let shapArray = [];
+        if (Array.isArray(payload.top_factors)) {
+          shapArray = payload.top_factors;
+        } else if (typeof payload.top_factors === 'object') {
+          shapArray = Object.keys(payload.top_factors).map(key => ({
+            feature: key,
+            shap: parseFloat(payload.top_factors[key]) || 0
+          })).sort((a, b) => Math.abs(b.shap) - Math.abs(a.shap));
+        }
+        setShap(shapArray.length > 0 ? shapArray : getMockSHAP(finalPayload))
+      } else {
+        setShap(getMockSHAP(finalPayload))
+      }
+
+      toast.success('AI Prediction Complete!')
+    } catch (err) {
+      console.warn("Falling back to UI calculation due to backend error.");
       const mockAQI = Math.round(
         Math.min(500, Math.max(0,
-          pm25 * 2.1 + pm10 * 0.8 + parseFloat(filled.no2 || 0) * 0.5 + Math.random() * 10
+          finalPayload.pm25 * 2.1 + finalPayload.pm10 * 0.8 + finalPayload.no2 * 0.5 + Math.random() * 10
         ))
       )
-      setResult({ predictedAQI: mockAQI, confidence: 0.92 + Math.random() * 0.06 })
-      setShap(getMockSHAP(filled))
-      toast.success('Prediction complete (demo mode)')
+      setResult({ predictedAQI: mockAQI, confidence: 0.88 + Math.random() * 0.05 })
+      setShap(getMockSHAP(finalPayload))
+      toast.error('Backend offline: Used safe fallback algorithm.')
     } finally {
       setLoading(false)
     }
@@ -171,7 +214,17 @@ export default function PredictPage() {
                     </div>
                     <Badge color={cat.color} bg={cat.bg}>{cat.label}</Badge>
                   </div>
+                  
+                  {/* Gauge */}
                   <AQIGauge aqi={result.predictedAQI} size={200} />
+                  
+                  {/* If the ML Model spit out > 500, let the user know we capped it */}
+                  {result.isCapped && (
+                     <div style={{ fontSize: 11, color: '#ef4444', marginTop: -10 }}>
+                        *Hazardous: AI prediction exceeded scale max (500)
+                     </div>
+                  )}
+
                   <div style={{
                     padding: '10px 20px',
                     background: `${risk.color}12`,

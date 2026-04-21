@@ -1,5 +1,4 @@
 import React, { useState, useRef, useEffect } from 'react'
-import { Button, Input, Spinner } from '../ui'
 import { sendChatMessage } from '../../services/api'
 
 const BotIcon = () => (
@@ -19,6 +18,17 @@ const SUGGESTIONS = [
   'Is it safe to exercise outside?',
   'What causes high PM2.5?',
 ]
+
+// Simple helper to convert markdown **bold** to HTML <strong>
+const formatMessage = (text) => {
+  const parts = text.split(/(\*\*.*?\*\*)/g);
+  return parts.map((part, index) => {
+    if (part.startsWith('**') && part.endsWith('**')) {
+      return <strong key={index}>{part.slice(2, -2)}</strong>;
+    }
+    return part;
+  });
+};
 
 export default function Chatbot({ currentAQI }) {
   const [messages, setMessages] = useState([
@@ -41,15 +51,18 @@ export default function Chatbot({ currentAQI }) {
     if (!msg || loading) return
     setInput('')
 
+    // Add user message to UI immediately
     const newMessages = [...messages, { role: 'user', content: msg }]
     setMessages(newMessages)
     setLoading(true)
 
     try {
+      // ✅ Send the message AND the history to the backend
       const res = await sendChatMessage(msg, messages)
-      setMessages([...newMessages, { role: 'assistant', content: res.data.reply || res.data.message }])
-    } catch {
-      // Fallback response when backend offline
+      setMessages([...newMessages, { role: 'assistant', content: res.data.reply }])
+    } catch (err) {
+      console.error("Chatbot Error:", err);
+      // Fallback response if the Llama API is down or missing key
       const fallback = getFallbackResponse(msg, currentAQI)
       setMessages([...newMessages, { role: 'assistant', content: fallback }])
     } finally {
@@ -60,14 +73,12 @@ export default function Chatbot({ currentAQI }) {
   const getFallbackResponse = (msg, aqi) => {
     const m = msg.toLowerCase()
     if (m.includes('aqi') && m.includes('mean'))
-      return 'AQI (Air Quality Index) measures air pollution on a scale of 0-500. 0-50 = Good, 51-100 = Moderate, 101-150 = Unhealthy for Sensitive Groups, 151-200 = Unhealthy, 201-300 = Very Unhealthy, 300+ = Hazardous.'
-    if (m.includes('mask') || m.includes('mask'))
-      return aqi > 100 ? `With AQI at ${aqi}, I recommend wearing an **N95 or KN95 mask** when outdoors. Surgical masks provide limited protection against PM2.5.` : `AQI is currently ${aqi} (${aqi <= 50 ? 'Good' : 'Moderate'}). No mask required for most people.`
-    if (m.includes('exercise') || m.includes('outdoor'))
-      return aqi > 100 ? `Current AQI of ${aqi} suggests you should **move exercise indoors**. Avoid prolonged outdoor exertion.` : 'Air quality is acceptable for outdoor exercise. Stay hydrated!'
-    if (m.includes('pm2.5') || m.includes('pm25'))
-      return 'PM2.5 refers to fine particulate matter with diameter ≤2.5 micrometers. These tiny particles can penetrate deep into lung tissue and enter the bloodstream, causing respiratory and cardiovascular issues.'
-    return `Based on the current AQI of ${aqi || '—'}, here are my recommendations: ${aqi > 150 ? 'Air quality is unhealthy. Stay indoors, use air purifier, and avoid outdoor activities.' : aqi > 100 ? 'Air quality is moderate to unhealthy for sensitive groups. Limit outdoor exposure.' : 'Air quality is acceptable. Normal activities are fine.'} Let me know if you have specific questions!`
+      return 'AQI (Air Quality Index) measures air pollution. 0-50 = Good, 51-100 = Moderate, 101-150 = Unhealthy for Sensitive, 151-200 = Unhealthy, 201-300 = Very Unhealthy.'
+    if (m.includes('mask'))
+      return aqi > 100 ? `With AQI at ${aqi}, I strongly recommend wearing an **N95 mask** outdoors.` : `AQI is currently ${aqi}. No mask required.`
+    if (m.includes('exercise'))
+      return aqi > 100 ? `AQI is ${aqi}. Please **move exercise indoors**.` : 'Air quality is acceptable for outdoor exercise!'
+    return `Based on the AQI of ${aqi || '—'}, ${aqi > 150 ? 'stay indoors and use an air purifier.' : 'normal activities are fine.'} (Note: AI backend is currently offline).`
   }
 
   if (!isOpen) {
@@ -79,10 +90,8 @@ export default function Chatbot({ currentAQI }) {
           width: 56, height: 56, borderRadius: '50%',
           background: 'var(--green-500)', border: 'none', cursor: 'pointer',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          color: '#080c0a',
-          boxShadow: '0 4px 20px rgba(34,197,94,0.4)',
-          transition: 'all 0.2s',
-          animation: 'pulse-green 2s infinite'
+          color: '#080c0a', boxShadow: '0 4px 20px rgba(34,197,94,0.4)',
+          transition: 'all 0.2s', animation: 'pulse-green 2s infinite'
         }}
         title="Open AI Chatbot"
       >
@@ -96,55 +105,43 @@ export default function Chatbot({ currentAQI }) {
   return (
     <div style={{
       position: 'fixed', bottom: 24, right: 24, zIndex: 500,
-      width: 360, height: 520,
-      background: 'var(--bg-card)',
-      border: '1px solid var(--border-green)',
-      borderRadius: 'var(--radius-xl)',
+      width: 360, height: 520, background: 'var(--bg-card)',
+      border: '1px solid var(--border-green)', borderRadius: 'var(--radius-xl)',
       boxShadow: '0 8px 40px rgba(0,0,0,0.5), 0 0 0 1px rgba(34,197,94,0.1)',
-      display: 'flex', flexDirection: 'column',
-      overflow: 'hidden',
+      display: 'flex', flexDirection: 'column', overflow: 'hidden',
       animation: 'fadeUp 0.3s ease'
     }}>
       {/* Header */}
       <div style={{
-        padding: '14px 16px',
-        borderBottom: '1px solid var(--border-subtle)',
+        padding: '14px 16px', borderBottom: '1px solid var(--border-subtle)',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         background: 'var(--bg-secondary)'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <div style={{
             width: 32, height: 32, background: 'var(--green-glow)',
-            border: '1px solid var(--border-green)',
-            borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
-            color: 'var(--green-400)'
+            border: '1px solid var(--border-green)', borderRadius: '50%', 
+            display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--green-400)'
           }}>
             <BotIcon />
           </div>
           <div>
-            <div style={{ fontSize: 13, fontWeight: 600 }}>AirSense AI</div>
+            <div style={{ fontSize: 13, fontWeight: 600 }}>AirSense AI (Llama 3)</div>
             <div style={{ fontSize: 11, color: 'var(--green-400)', display: 'flex', alignItems: 'center', gap: 4 }}>
               <span style={{ width: 6, height: 6, background: 'var(--green-400)', borderRadius: '50%', display: 'inline-block' }} />
               Online
             </div>
           </div>
         </div>
-        <button
-          onClick={() => setIsOpen(false)}
-          style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: 18 }}
-        >×</button>
+        <button onClick={() => setIsOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: 18 }}>×</button>
       </div>
 
       {/* Messages */}
       <div style={{ flex: 1, overflowY: 'auto', padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
         {messages.map((msg, i) => (
-          <div key={i} style={{
-            display: 'flex',
-            justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start',
-          }}>
+          <div key={i} style={{ display: 'flex', justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start' }}>
             <div style={{
-              maxWidth: '80%',
-              padding: '9px 13px',
+              maxWidth: '85%', padding: '10px 14px',
               borderRadius: msg.role === 'user' ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
               background: msg.role === 'user' ? 'var(--green-600)' : 'var(--bg-secondary)',
               border: msg.role === 'user' ? 'none' : '1px solid var(--border-subtle)',
@@ -152,7 +149,8 @@ export default function Chatbot({ currentAQI }) {
               color: msg.role === 'user' ? '#fff' : 'var(--text-primary)',
               whiteSpace: 'pre-wrap'
             }}>
-              {msg.content.replace(/\*\*(.*?)\*\*/g, '$1')}
+              {/* ✅ Formats markdown bold correctly */}
+              {formatMessage(msg.content)}
             </div>
           </div>
         ))}
@@ -174,16 +172,11 @@ export default function Chatbot({ currentAQI }) {
       {messages.length <= 1 && (
         <div style={{ padding: '0 12px 8px', display: 'flex', flexWrap: 'wrap', gap: 6 }}>
           {SUGGESTIONS.map(s => (
-            <button
-              key={s}
-              onClick={() => sendMessage(s)}
-              style={{
-                padding: '4px 10px', borderRadius: 'var(--radius-full)',
-                background: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)',
-                color: 'var(--text-secondary)', fontSize: 11, cursor: 'pointer',
-                transition: 'var(--transition)'
-              }}
-            >
+            <button key={s} onClick={() => sendMessage(s)} style={{
+              padding: '5px 12px', borderRadius: 'var(--radius-full)',
+              background: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)',
+              color: 'var(--text-secondary)', fontSize: 12, cursor: 'pointer', transition: 'var(--transition)'
+            }}>
               {s}
             </button>
           ))}
@@ -192,8 +185,7 @@ export default function Chatbot({ currentAQI }) {
 
       {/* Input */}
       <div style={{
-        padding: '10px 12px',
-        borderTop: '1px solid var(--border-subtle)',
+        padding: '10px 12px', borderTop: '1px solid var(--border-subtle)',
         display: 'flex', gap: 8, alignItems: 'center'
       }}>
         <input
@@ -202,24 +194,20 @@ export default function Chatbot({ currentAQI }) {
           onKeyDown={e => e.key === 'Enter' && !e.shiftKey && sendMessage()}
           placeholder="Ask about air quality..."
           style={{
-            flex: 1, background: 'var(--bg-secondary)',
-            border: '1px solid var(--border-subtle)',
-            borderRadius: 'var(--radius-full)', padding: '8px 14px',
+            flex: 1, background: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)',
+            borderRadius: 'var(--radius-full)', padding: '10px 14px',
             color: 'var(--text-primary)', fontSize: 13, outline: 'none'
           }}
           onFocus={e => e.target.style.borderColor = 'var(--border-green-strong)'}
           onBlur={e => e.target.style.borderColor = 'var(--border-subtle)'}
         />
         <button
-          onClick={() => sendMessage()}
-          disabled={!input.trim() || loading}
+          onClick={() => sendMessage()} disabled={!input.trim() || loading}
           style={{
-            width: 36, height: 36, borderRadius: '50%',
+            width: 38, height: 38, borderRadius: '50%',
             background: input.trim() ? 'var(--green-500)' : 'var(--bg-secondary)',
-            border: '1px solid var(--border-subtle)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            cursor: input.trim() ? 'pointer' : 'default',
-            color: input.trim() ? '#080c0a' : 'var(--text-muted)',
+            border: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+            cursor: input.trim() ? 'pointer' : 'default', color: input.trim() ? '#080c0a' : 'var(--text-muted)',
             transition: 'var(--transition)'
           }}
         >

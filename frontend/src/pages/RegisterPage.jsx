@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { useAuth } from '../context/AuthContext'
+import { useAuth } from '../context/AuthContext' // Or { AuthContext } and useContext depending on your setup
 import { Input, Button } from '../components/ui'
 import toast from 'react-hot-toast'
 
@@ -8,7 +8,12 @@ export default function RegisterPage() {
   const [form, setForm] = useState({ name: '', email: '', password: '', confirmPassword: '', role: 'user' })
   const [loading, setLoading] = useState(false)
   const [errors, setErrors] = useState({})
-  const { register } = useAuth()
+  
+  // NOTE: If you used my AuthContext snippet exactly, this might be named 'signup' instead of 'register'. 
+  // Just ensure the name here matches what is exported in your AuthContext.jsx.
+  const { register, signup } = useAuth() 
+  const authSubmit = register || signup // Safety fallback depending on what you named it
+
   const navigate = useNavigate()
 
   const set = (k) => (e) => setForm(p => ({ ...p, [k]: e.target.value }))
@@ -28,12 +33,21 @@ export default function RegisterPage() {
     e.preventDefault()
     const errs = validate()
     if (Object.keys(errs).length) { setErrors(errs); return }
+    
     setLoading(true)
     try {
-      await register(form.name, form.email, form.password, form.role)
+      // ✅ FIX: We now pass the data as a single object so Axios sends it correctly in req.body
+      await authSubmit({
+        name: form.name,
+        email: form.email,
+        password: form.password,
+        role: form.role
+      })
+      
       toast.success('Account created! Welcome to AirSense AI.')
       navigate('/dashboard')
     } catch (err) {
+      // ✅ FIX: This now accurately pulls the error message from our new backend error middleware
       const msg = err.response?.data?.message || 'Registration failed.'
       toast.error(msg)
       setErrors({ form: msg })
@@ -42,6 +56,9 @@ export default function RegisterPage() {
     }
   }
 
+  // ==========================================
+  // UI DESIGN REMAINS EXACTLY AS YOU BUILT IT
+  // ==========================================
   return (
     <div style={{
       minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',

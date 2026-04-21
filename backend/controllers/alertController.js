@@ -1,21 +1,14 @@
 const alertService = require('../services/alertService');
 const { successResponse, errorResponse } = require('../utils/apiResponse');
 
-exports.getCurrentAlerts = async (req, res) => {
+// @desc    Manually trigger the alert check system
+// @route   POST /api/alerts/trigger
+// @access  Admin (or public for testing)
+exports.triggerAlerts = async (req, res) => {
   try {
-    const alerts = await alertService.getActiveAlerts();
-    successResponse(res, alerts);
-  } catch (err) {
-    errorResponse(res, err.message);
-  }
-};
-
-exports.createAlert = async (req, res) => {
-  try {
-    const alertData = { ...req.body, issuedBy: req.user.id };
-    const alert = await alertService.createAlert(alertData);
-    successResponse(res, alert, 'Alert created', 201);
-  } catch (err) {
-    errorResponse(res, err.message);
+    const result = await alertService.sendHighRiskAlerts();
+    successResponse(res, result, result.message);
+  } catch (error) {
+    errorResponse(res, 'Failed to trigger alerts: ' + error.message, 500);
   }
 };

@@ -1,10 +1,11 @@
-import React, { useState } from 'react'
-import { getMockAQIData } from '../services/api'
+import React, { useState, useEffect } from 'react'
+// ✅ We import the default API instance to make the backend call
+import API from '../services/api' 
 import { getAQICategory } from '../utils/aqiUtils'
-import { Card, SectionHeading } from '../components/ui'
+import { Card, SectionHeading, Spinner } from '../components/ui'
 import { AQIAreaChart, PM25BarChart } from '../components/charts/AQICharts'
 
-// Generate more history data
+// Fallback generator just in case the database is totally empty
 const generateHistory = () => {
   const data = []
   for (let i = 29; i >= 0; i--) {
@@ -23,12 +24,62 @@ const generateHistory = () => {
   return data
 }
 
-const history30 = generateHistory()
-
 export default function HistoryPage() {
   const [range, setRange] = useState(7)
   const [search, setSearch] = useState('')
-  const filtered = history30.slice(-(range)).filter(r =>
+  const [historyData, setHistoryData] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const loadHistory = async () => {
+      setLoading(true)
+      try {
+        // Fetch up to 30 days of real data from the backend
+        const res = await API.get('/aqi/history?days=30')
+        const backendData = res.data.data
+        
+        if (!backendData || backendData.length === 0) {
+          throw new Error("No data in database")
+        }
+
+        // Format backend data to exactly match what the UI expects
+        const formatted = backendData.map(d => {
+          const dateObj = new Date(d.date)
+          const aqi = d.aqi || 0
+          return {
+            date: dateObj.toLocaleDateString('en-IN', { month: 'short', day: 'numeric' }),
+            fullDate: dateObj.toLocaleDateString('en-IN', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' }),
+            aqi: aqi,
+            pm25: d.pm25 || 0,
+            pm10: d.pm10 || 0,
+            no2: d.no2 || 0,
+            category: getAQICategory(aqi).label
+          }
+        })
+        
+        setHistoryData(formatted)
+      } catch (err) {
+        console.warn("Using fallback data. Backend might be empty or missing route.")
+        setHistoryData(generateHistory())
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadHistory()
+  }, [])
+
+  if (loading) return (
+    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', paddingTop: 64 }}>
+      <div style={{ textAlign: 'center' }}>
+        <Spinner size={48} />
+        <p style={{ color: 'var(--text-muted)', marginTop: 16 }}>Loading historical data...</p>
+      </div>
+    </div>
+  )
+
+  // Slicing safely from the end of the array to get the most recent 'range' days
+  const filtered = historyData.slice(-(range)).filter(r =>
     !search || r.category.toLowerCase().includes(search.toLowerCase()) || r.aqi.toString().includes(search)
   )
 

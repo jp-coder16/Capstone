@@ -13,6 +13,7 @@ import PredictPage   from './pages/PredictPage'
 import HistoryPage   from './pages/HistoryPage'
 import AdminPage     from './pages/AdminPage'
 import NotFoundPage  from './pages/NotFoundPage'
+import ProfilePage from './pages/ProfilePage'
 
 function AppInner() {
   const location = useLocation()
@@ -26,6 +27,11 @@ function AppInner() {
         <Route path="/login"     element={<LoginPage />} />
         <Route path="/register"  element={<RegisterPage />} />
         <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
+        <Route path="/profile" element={
+  <ProtectedRoute>
+    <ProfilePage />
+  </ProtectedRoute>
+} />
         <Route path="/predict"   element={<ProtectedRoute><PredictPage /></ProtectedRoute>} />
         <Route path="/history"   element={<ProtectedRoute><HistoryPage /></ProtectedRoute>} />
         <Route path="/admin"     element={<ProtectedRoute adminOnly><AdminPage /></ProtectedRoute>} />

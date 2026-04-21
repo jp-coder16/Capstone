@@ -1,6 +1,7 @@
-import React, { useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import { fetchSystemStats } from '../services/api' // ✅ Import the API
 
 const Feature = ({ icon, title, desc, delay }) => (
   <div
@@ -37,12 +38,34 @@ const Feature = ({ icon, title, desc, delay }) => (
 const Stat = ({ value, label, color = 'var(--green-400)' }) => (
   <div style={{ textAlign: 'center' }}>
     <div style={{ fontFamily: 'var(--font-display)', fontSize: 36, fontWeight: 800, color }}>{value}</div>
-    <div style={{ color: 'var(--text-muted)', fontSize: 13, marginTop: 4 }}>{label}</div>
+    <div style={{ color: 'var(--text-muted)', fontSize: 13, marginTop: 4, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{label}</div>
   </div>
 )
 
 export default function HomePage() {
   const { isAuthenticated } = useAuth()
+  
+  // ✅ Create state for the live stats
+  const [stats, setStats] = useState({
+    accuracy: '94.2',
+    dataPoints: '0',
+    pollutants: '6'
+  });
+
+  // ✅ Fetch the real numbers from the backend when the page loads
+  useEffect(() => {
+    const getStats = async () => {
+      try {
+        const res = await fetchSystemStats();
+        if (res.data && res.data.data) {
+          setStats(res.data.data);
+        }
+      } catch (err) {
+        console.error("Could not fetch live stats, using defaults.");
+      }
+    };
+    getStats();
+  }, []);
 
   return (
     <div style={{ paddingTop: 64 }}>
@@ -153,9 +176,10 @@ export default function HomePage() {
           display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)',
           gap: 24
         }}>
-          <Stat value="99.2%" label="Prediction Accuracy" color="var(--green-400)" />
-          <Stat value="24/7" label="Real-Time Monitoring" color="#38bdf8" />
-          <Stat value="6+" label="Pollutants Tracked" color="#c084fc" />
+          {/* ✅ THE LIVE STATS */}
+          <Stat value={`${stats.accuracy}%`} label="Prediction Accuracy" color="var(--green-400)" />
+          <Stat value={`${stats.dataPoints}+`} label="Live Data Points" color="#38bdf8" />
+          <Stat value={`${stats.pollutants}+`} label="Pollutants Tracked" color="#c084fc" />
         </div>
       </section>
 

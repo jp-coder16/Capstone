@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
-import { getMockAQIData, fetchCurrentAQI, fetchAQIHistory } from '../services/api'
+import { getMockAQIData, fetchDashboardData } from '../services/api'
 import { getAQICategory } from '../utils/aqiUtils'
 import AQIGauge from '../components/dashboard/AQIGauge'
 import PollutantsGrid from '../components/dashboard/PollutantsGrid'
@@ -9,6 +9,7 @@ import Chatbot from '../components/dashboard/Chatbot'
 import { AQIAreaChart, PM25BarChart, ForecastChart } from '../components/charts/AQICharts'
 import { Card, StatTile, SectionHeading, Badge, Spinner } from '../components/ui'
 import toast from 'react-hot-toast'
+import { Link } from 'react-router-dom'; // Add this near the top
 
 const TempIcon = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -31,18 +32,23 @@ export default function DashboardPage() {
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
-  const [tab, setTab] = useState('overview') // overview | pollutants | forecast | history
+  const [tab, setTab] = useState('overview') 
   const [institutionMode, setInstitutionMode] = useState(false)
 
   const loadData = async (silent = false) => {
     if (!silent) setLoading(true)
     else setRefreshing(true)
     try {
-      const mock = getMockAQIData()
-      // In production: await fetchCurrentAQI(city) etc.
-      setData(mock)
-    } catch {
-      toast.error('Failed to fetch AQI data')
+      const res = await fetchDashboardData()
+      if (res.data && res.data.data) {
+        setData(res.data.data)
+      } else {
+        throw new Error("No data returned")
+      }
+    } catch (error) {
+      console.warn("Using mock data because:", error.message)
+      setData(getMockAQIData())
+      if (!silent) toast.success('Loaded sample environment data')
     } finally {
       setLoading(false)
       setRefreshing(false)
@@ -51,7 +57,7 @@ export default function DashboardPage() {
 
   useEffect(() => {
     loadData()
-    const interval = setInterval(() => loadData(true), 5 * 60 * 1000) // refresh every 5min
+    const interval = setInterval(() => loadData(true), 5 * 60 * 1000) 
     return () => clearInterval(interval)
   }, [])
 
@@ -89,12 +95,49 @@ export default function DashboardPage() {
               {isInstitution ? '🏛️ Institution Dashboard' : '👤 Individual Dashboard'}
             </h1>
             <p style={{ color: 'var(--text-secondary)', fontSize: 14 }}>
-              Welcome back, <strong style={{ color: 'var(--text-primary)' }}>{user?.name || 'User'}</strong>
+              Real-time environmental monitoring
               {' '}· Last updated {new Date(current.updatedAt).toLocaleTimeString()}
               {refreshing && <span style={{ color: 'var(--green-400)', marginLeft: 8 }}>↻ Refreshing...</span>}
             </p>
           </div>
+          
           <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+            
+            {/* ✅ NEW: DYNAMIC PROFILE BADGE (CLICKABLE) */}
+            <Link to="/profile" style={{ textDecoration: 'none' }}>
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: 10,
+                padding: '6px 16px 6px 6px', 
+                background: isInstitution ? 'rgba(168,85,247,0.08)' : 'rgba(34,197,94,0.08)',
+                border: `1px solid ${isInstitution ? 'rgba(168,85,247,0.2)' : 'rgba(34,197,94,0.2)'}`,
+                borderRadius: 'var(--radius-full)',
+                marginRight: 8,
+                cursor: 'pointer',
+                transition: 'all 0.3s ease'
+              }}
+              onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.03)'}
+              onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
+              >
+                <div style={{
+                  width: 34, height: 34, borderRadius: '50%',
+                  background: isInstitution ? '#c084fc' : 'var(--green-500)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  color: isInstitution ? '#fff' : '#080c0a', fontSize: 16, fontWeight: 'bold',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.2)'
+                }}>
+                  {isInstitution ? '🏫' : (user?.name?.[0]?.toUpperCase() || 'U')}
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', paddingRight: 4 }}>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1.2 }}>
+                    {isInstitution ? (user?.institutionName || 'Demo Academy') : (user?.name || 'User')}
+                  </span>
+                  <span style={{ fontSize: 11, color: isInstitution ? '#c084fc' : 'var(--green-400)', fontWeight: 600 }}>
+                    {isInstitution ? 'Institution Profile' : 'Personal Profile'}
+                  </span>
+                </div>
+              </div>
+            </Link>
+
             {/* Institution toggle */}
             <button
               onClick={() => setInstitutionMode(p => !p)}
@@ -148,19 +191,27 @@ export default function DashboardPage() {
             {/* Forecast row */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
               {forecast.map((f, i) => {
-                const fc = getAQICategory(f.aqi)
+                // ✅ FIX: Force the AI's raw number to be a clean, rounded integer
+                const cleanAQI = Math.round(f.aqi || 0); 
+                const fc = getAQICategory(cleanAQI);
+                
                 return (
                   <div key={i} style={{
                     background: 'var(--bg-card)',
-                    border: `1px solid ${i === 1 ? 'var(--border-green)' : 'var(--border-subtle)'}`,
+                    border: `1px solid ${i === 0 ? 'var(--border-green)' : 'var(--border-subtle)'}`,
                     borderRadius: 'var(--radius-md)',
                     padding: '14px 16px'
                   }}>
                     <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 6 }}>
-                      {f.date}{i === 1 && <span style={{ color: 'var(--green-400)', marginLeft: 4 }}>← Predicted</span>}
+                      {f.date}{i === 0 && <span style={{ color: 'var(--green-400)', marginLeft: 4 }}>← Predicted</span>}
                     </div>
-                    <div style={{ fontFamily: 'var(--font-display)', fontSize: 28, fontWeight: 800, color: fc.color }}>{f.aqi}</div>
-                    <div style={{ fontSize: 12, color: fc.color, marginTop: 2 }}>{f.category}</div>
+                    {/* ✅ Render the cleanAQI here */}
+                    <div style={{ fontFamily: 'var(--font-display)', fontSize: 28, fontWeight: 800, color: fc.color }}>
+                      {cleanAQI}
+                    </div>
+                    <div style={{ fontSize: 12, color: fc.color, marginTop: 2 }}>
+                      {f.category || fc.label}
+                    </div>
                   </div>
                 )
               })}

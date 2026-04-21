@@ -35,12 +35,20 @@ export default function LoginPage() {
     e.preventDefault()
     const errs = validate()
     if (Object.keys(errs).length) { setErrors(errs); return }
+    
     setLoading(true)
     try {
-      const user = await login(email, password)
-      toast.success(`Welcome back, ${user.name}!`)
+      // ✅ THE FIX: Wrap the email and password in curly braces { }
+      await login({
+        email: email,
+        password: password
+      })
+      
+      // ✅ Update toast since AuthContext handles the user state now
+      toast.success('Welcome back!')
       navigate('/dashboard')
     } catch (err) {
+      // ✅ Pulls the standardized error from our backend
       const msg = err.response?.data?.message || 'Login failed. Check credentials.'
       toast.error(msg)
       setErrors({ form: msg })

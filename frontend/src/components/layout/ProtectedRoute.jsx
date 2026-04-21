@@ -3,7 +3,8 @@ import { Navigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 
 export default function ProtectedRoute({ children, adminOnly = false }) {
-  const { isAuthenticated, user, loading } = useAuth()
+  // ✅ FIX 1: We only pull 'user' and 'loading' from the context now
+  const { user, loading } = useAuth()
 
   if (loading) return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh' }}>
@@ -18,7 +19,9 @@ export default function ProtectedRoute({ children, adminOnly = false }) {
     </div>
   )
 
-  if (!isAuthenticated) return <Navigate to="/login" replace />
+  // ✅ FIX 2: Check if there is NO user, then kick them back to login
+  if (!user) return <Navigate to="/login" replace />
+  
   if (adminOnly && user?.role !== 'admin') return <Navigate to="/dashboard" replace />
 
   return children

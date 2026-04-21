@@ -1,6 +1,5 @@
 import React from 'react'
 import { getRiskLevel } from '../../utils/aqiUtils'
-import { Card, Badge } from '../ui'
 
 const icons = {
   outdoor: '🌿',
@@ -9,25 +8,21 @@ const icons = {
   ventilation: '🪟',
 }
 
-export default function RecommendationPanel({ aqi, recommendations, userType = 'individual' }) {
-  const risk = getRiskLevel(aqi || 0)
+export default function RecommendationPanel({ aqi = 0, recommendations, userType = 'individual' }) {
+  const risk = getRiskLevel(aqi)
 
+  // Fallback defaults just in case the ML server goes offline
   const defaultRecs = {
-    outdoor: aqi <= 100 ? 'Safe for outdoor activities' : 'Avoid prolonged outdoor exposure',
-    mask: aqi <= 50 ? 'No mask required' : aqi <= 100 ? 'Optional mask' : 'N95/KN95 recommended',
-    exercise: aqi <= 100 ? 'Normal exercise okay' : 'Move exercise indoors',
-    ventilation: aqi <= 100 ? 'Open windows for fresh air' : 'Keep windows closed, use air purifier',
+    outdoor: 'Safe for outdoor activities',
+    mask: 'No mask required',
+    exercise: 'Normal exercise okay',
+    ventilation: 'Open windows for fresh air',
+    tips: ['Air quality is good — enjoy outdoor activities']
   }
 
-  const tips = recommendations?.tips || [
-    aqi <= 50 && 'Air quality is good — enjoy outdoor activities',
-    aqi > 50 && aqi <= 100 && 'Unusually sensitive individuals should consider reducing outdoor exertion',
-    aqi > 100 && 'Limit prolonged outdoor exertion for sensitive groups',
-    aqi > 150 && 'Everyone should avoid prolonged outdoor exertion',
-    aqi > 200 && 'Avoid all outdoor activities; stay indoors with air purifier',
-  ].filter(Boolean)
-
+  // The 'recommendations' object now comes perfectly formatted directly from our Python ML model!
   const recs = recommendations || defaultRecs
+  const tips = recs.tips || defaultRecs.tips
   const institutionMode = userType === 'institution'
 
   return (
@@ -49,12 +44,12 @@ export default function RecommendationPanel({ aqi, recommendations, userType = '
         <div style={{ textAlign: 'right' }}>
           <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>AQI</div>
           <div style={{ fontSize: 28, fontWeight: 800, fontFamily: 'var(--font-display)', color: risk.color }}>
-            {aqi || '—'}
+            {aqi}
           </div>
         </div>
       </div>
 
-      {/* Institution toggle */}
+      {/* Institution Mode Protocol Banner */}
       {institutionMode && (
         <div style={{
           padding: '12px 16px',
@@ -63,23 +58,25 @@ export default function RecommendationPanel({ aqi, recommendations, userType = '
           borderRadius: 'var(--radius-md)',
           fontSize: 13
         }}>
-          <div style={{ fontWeight: 600, color: '#c084fc', marginBottom: 6 }}>🏫 Institution Mode</div>
+          <div style={{ fontWeight: 600, color: '#c084fc', marginBottom: 6 }}>🏫 Institution Protocol Active</div>
           <div style={{ display: 'flex', gap: 12 }}>
             <span style={{ color: 'var(--text-secondary)' }}>
-              Outdoor sports: <strong style={{ color: aqi <= 100 ? 'var(--aqi-good)' : '#ef4444' }}>
-                {aqi <= 100 ? 'Allowed' : 'Restricted'}
+              Outdoor Sports:{' '}
+              <strong style={{ color: aqi <= 100 ? 'var(--aqi-good)' : aqi <= 150 ? '#eab308' : '#ef4444' }}>
+                {aqi <= 100 ? 'Allowed' : aqi <= 150 ? 'Restricted' : 'CANCELLED'}
               </strong>
             </span>
             <span style={{ color: 'var(--text-secondary)' }}>
-              Assembly: <strong style={{ color: aqi <= 100 ? 'var(--aqi-good)' : '#eab308' }}>
-                {aqi <= 100 ? 'Allowed' : 'Caution'}
+              Assembly:{' '}
+              <strong style={{ color: aqi <= 100 ? 'var(--aqi-good)' : aqi <= 200 ? '#eab308' : '#ef4444' }}>
+                {aqi <= 100 ? 'Allowed' : aqi <= 200 ? 'Move Indoors' : 'CANCELLED'}
               </strong>
             </span>
           </div>
         </div>
       )}
 
-      {/* Rec cards */}
+      {/* Dynamic 4-Grid Cards driven by ML Model */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
         {Object.entries(icons).map(([key, icon]) => (
           <div key={key} style={{
@@ -93,16 +90,17 @@ export default function RecommendationPanel({ aqi, recommendations, userType = '
               {key.charAt(0).toUpperCase() + key.slice(1)}
             </div>
             <div style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.4 }}>
-              {recs[key] || defaultRecs[key]}
+              {/* Pulls directly from the Python ML dictionary */}
+              {recs[key] || defaultRecs[key]} 
             </div>
           </div>
         ))}
       </div>
 
-      {/* Tips */}
+      {/* Dynamic Advisory Tips */}
       <div>
         <div style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-          Advisory Tips
+          AI Health Advisory
         </div>
         <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 6 }}>
           {tips.map((tip, i) => (

@@ -1,12 +1,11 @@
 const express = require('express');
-const { getForecast, getRisk, getXAI, predict, explain } = require('../controllers/mlController');
 const router = express.Router();
+const { predict, explain, getForecast, getRisk, getXAI } = require('../controllers/mlController');
 
-router.get('/forecast', getForecast);
-router.get('/risk',     getRisk);
-router.get('/xai',      getXAI);
-// Also accessible via /api/ml/predict and /api/ml/explain directly
 router.post('/predict', predict);
 router.post('/explain', explain);
+router.get('/forecast', getForecast);
+router.get('/risk', getRisk);
+router.get('/xai', getXAI);
 
 module.exports = router;

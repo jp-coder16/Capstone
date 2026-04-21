@@ -1,91 +1,80 @@
-import axios from 'axios'
+import axios from 'axios';
 
-const api = axios.create({
+// Ensure this matches the port we set in the backend .env
+const API = axios.create({
   baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000/api',
-  timeout: 15000,
-  headers: { 'Content-Type': 'application/json' }
-})
+});
 
-// Response interceptor
-api.interceptors.response.use(
-  (res) => res,
-  (err) => {
-    if (err.response?.status === 401) {
-      localStorage.removeItem('token')
-      localStorage.removeItem('user')
-      window.location.href = '/login'
-    }
-    return Promise.reject(err)
+// Interceptor to attach the JWT token
+API.interceptors.request.use((req) => {
+  const token = localStorage.getItem('token');
+  if (token) {
+    req.headers.Authorization = `Bearer ${token}`;
   }
-)
+  return req;
+});
 
-// ─── AQI ──────────────────────────────────────────────
-export const fetchCurrentAQI = (location) =>
-  api.get('/aqi/current', { params: { location } })
+// --- AUTH ENDPOINTS ---
+export const registerUser = (userData) => API.post('/auth/signup', userData);
+export const loginUser = (userData) => API.post('/auth/login', userData);
+export const fetchProfile = () => API.get('/auth/profile');
 
-export const fetchAQIHistory = (location, days = 7) =>
-  api.get('/aqi/history', { params: { location, days } })
+// --- ML ENDPOINTS ---
+export const predictAQI = (data) => API.post('/ml/predict', data);
+export const explainPrediction = (data) => API.post('/ml/explain', { features: data });
 
-// ─── ML / Predict ──────────────────────────────────────
-export const predictAQI = (data) => api.post('/predict', data)
+// --- CHATBOT ENDPOINTS ---
+// Chatbot endpoint
+export const sendChatMessage = (message, history) => API.post('/chatbot/ask', { message, history });
 
-export const recommendActions = (aqi, userType) =>
-  api.post('/recommend', { aqi, userType })
+// --- AQI DASHBOARD ENDPOINTS ---
+export const fetchCurrentAQI = () => API.get('/aqi/current');
+export const fetchAQIHistory = () => API.get('/aqi/history');
 
-export const explainPrediction = (features) =>
-  api.post('/explain', { features })
+export const fetchDashboardData = () => API.get('/dashboard');
 
-// ─── Chat ──────────────────────────────────────────────
-export const sendChatMessage = (message, history) =>
-  api.post('/chat', { message, history })
+// ✅ ADD THIS LINE:
+export const fetchSystemStats = () => API.get('/dashboard/stats');
 
-// ─── Auth ──────────────────────────────────────────────
-export const loginUser = (email, password) =>
-  api.post('/auth/login', { email, password })
 
-export const registerUser = (name, email, password, role) =>
-  api.post('/auth/register', { name, email, password, role })
 
-// ─── Mock Data (fallback when backend not running) ─────
-export const getMockAQIData = () => ({
-  current: {
-    aqi: 85,
-    category: 'Moderate',
-    location: 'Your City',
-    pm25: 28.4,
-    pm10: 45.2,
-    no2: 38.1,
-    o3: 52.3,
-    co: 0.8,
-    so2: 12.1,
-    temperature: 32,
-    humidity: 65,
-    updatedAt: new Date().toISOString()
-  },
-  forecast: [
-    { date: 'Today', aqi: 85, category: 'Moderate' },
-    { date: 'Tomorrow', aqi: 92, category: 'Moderate' },
-    { date: 'Day 3', aqi: 110, category: 'Unhealthy for SG' },
-  ],
-  history: Array.from({ length: 7 }, (_, i) => ({
-    date: new Date(Date.now() - (6 - i) * 86400000).toLocaleDateString('en', { month: 'short', day: 'numeric' }),
-    aqi: Math.floor(60 + Math.random() * 60),
-    pm25: Math.floor(15 + Math.random() * 30)
-  })),
-  recommendations: {
-    riskLevel: 'Medium',
-    outdoor: false,
-    mask: 'N95 recommended',
-    exercise: 'Move indoors',
-    ventilation: 'Keep windows closed',
-    tips: [
-      'Limit prolonged outdoor exertion',
-      'Wear N95/KN95 mask if going outside',
-      'Keep windows and doors closed',
-      'Use air purifier if available',
-      'Stay hydrated and monitor symptoms'
+// --- MOCK DATA (Restored for your UI charts) ---
+// --- MOCK DATA (Fallback if backend/DB is empty) ---
+export const getMockAQIData = () => {
+  return {
+    current: {
+      aqi: 45,
+      location: 'Demo Station (Mock Data)',
+      updatedAt: new Date().toISOString(),
+      temperature: 24,
+      humidity: 45,
+      pm25: 12,
+      pm10: 20,
+      no2: 15,
+      o3: 35,
+      co: 0.4,
+      so2: 4,
+      wind: 6
+    },
+    history: [
+      { date: 'Mon', aqi: 42, pm25: 10 },
+      { date: 'Tue', aqi: 48, pm25: 14 },
+      { date: 'Wed', aqi: 55, pm25: 18 },
+      { date: 'Thu', aqi: 60, pm25: 22 },
+      { date: 'Fri', aqi: 50, pm25: 15 },
+      { date: 'Sat', aqi: 45, pm25: 12 },
+      { date: 'Sun', aqi: 45, pm25: 12 }
+    ],
+    forecast: [
+      { date: 'Tomorrow', aqi: 50, category: 'Good' },
+      { date: 'Day 3', aqi: 55, category: 'Moderate' },
+      { date: 'Day 4', aqi: 48, category: 'Good' }
+    ],
+    recommendations: [
+      'Air quality is ideal! Perfect for outdoor workouts.',
+      'Open your windows to bring in fresh air.',
+      'No masks required today.'
     ]
-  }
-})
-
-export default api
+  };
+};
+export default API;
