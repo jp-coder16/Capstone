@@ -1,31 +1,58 @@
-exports.getRecommendation = (latest) => {
-  if (!latest || !latest.aqi) {
-    return {
-      risk: "Unknown",
-      workout: "Unable to fetch AQI",
-      hygiene: "Check connection"
-    };
-  }
+/**
+ * Generate recommendations based on AQI and PM2.5
+ */
+const getRecommendations = (aqi, pm25) => {
+  let risk = 'Low';
+  let workout = 'Outdoor activities allowed';
+  let mask = 'No mask needed';
+  let outdoorAllowed = true;
+  let tips = ['Enjoy outdoor time'];
 
-  const aqi = latest.aqi;
-
-  if (aqi <= 50) {
-    return {
-      risk: "Low",
-      workout: "Outdoor activities allowed ✅ (yoga, running, cycling)",
-      hygiene: "No mask needed. Normal ventilation."
-    };
-  } else if (aqi <= 100) {
-    return {
-      risk: "Medium",
-      workout: "Limit outdoor time. Prefer indoor exercises.",
-      hygiene: "Light mask recommended for sensitive people."
-    };
+  if (aqi > 300) {
+    risk = 'Hazardous';
+    workout = 'Stay indoors, no physical exertion';
+    mask = 'N95 mandatory';
+    outdoorAllowed = false;
+    tips = ['Avoid all outdoor activity', 'Use air purifier', 'Keep windows closed'];
+  } else if (aqi > 200) {
+    risk = 'Very Unhealthy';
+    workout = 'Indoor yoga only';
+    mask = 'N95 recommended';
+    outdoorAllowed = false;
+    tips = ['Avoid outdoor exercise', 'Limit exposure'];
+  } else if (aqi > 150) {
+    risk = 'Unhealthy';
+    workout = 'Light indoor exercise';
+    mask = 'Surgical mask';
+    outdoorAllowed = false;
+    tips = ['Reduce outdoor time', 'Wear mask if going out'];
+  } else if (aqi > 100) {
+    risk = 'Unhealthy for Sensitive Groups';
+    workout = 'Limited outdoor activity';
+    mask = 'Optional, but advised';
+    outdoorAllowed = true;
+    tips = ['Sensitive individuals should limit outdoor exposure'];
+  } else if (aqi > 50) {
+    risk = 'Moderate';
+    workout = 'Outdoor OK for most';
+    mask = 'Not needed';
+    outdoorAllowed = true;
+    tips = ['Acceptable air quality'];
   } else {
-    return {
-      risk: "High",
-      workout: "Stay indoors only. Breathing exercises / indoor yoga.",
-      hygiene: "N95 mask if going out. Close windows. Stay hydrated."
-    };
+    risk = 'Good';
+    workout = 'Full outdoor activities';
+    mask = 'None';
+    outdoorAllowed = true;
+    tips = ['Excellent air quality'];
   }
+
+  return {
+    risk,
+    workout,
+    mask,
+    outdoorAllowed,
+    tips
+  };
 };
+
+module.exports = { getRecommendations };

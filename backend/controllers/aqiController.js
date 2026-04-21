@@ -1,26 +1,31 @@
-const axios = require("axios");
+const aqiService = require('../services/aqiService');
+const { successResponse, errorResponse } = require('../utils/apiResponse');
 
-exports.getPrediction = async (req, res) => {
-    try {
-        const response = await axios.post("http://localhost:8000/predict", {
-            pm25: req.body.pm25,
-            pm10: req.body.pm10,
-            no2: req.body.no2,
-            so2: req.body.so2,
-            co: req.body.co,
-            o3: req.body.o3,
-            temp: req.body.temp,
-            humidity: req.body.humidity,
-            wind: req.body.wind
-        });
+exports.getCurrentAQI = async (req, res) => {
+  try {
+    const current = await aqiService.getLatestAQI();
+    if (!current) return errorResponse(res, 'No AQI data available', 404);
+    successResponse(res, current, 'Current AQI fetched');
+  } catch (err) {
+    errorResponse(res, err.message);
+  }
+};
 
-        res.json({
-            success: true,
-            prediction: response.data.predicted_aqi
-        });
+exports.getHistory = async (req, res) => {
+  try {
+    const days = parseInt(req.query.days) || 7;
+    const history = await aqiService.getHistory(days);
+    successResponse(res, history, `Last ${days} days history`);
+  } catch (err) {
+    errorResponse(res, err.message);
+  }
+};
 
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: "ML service failed" });
-    }
+exports.addAQIData = async (req, res) => {
+  try {
+    const newData = await aqiService.addAQIData(req.body);
+    successResponse(res, newData, 'AQI data added', 201);
+  } catch (err) {
+    errorResponse(res, err.message);
+  }
 };

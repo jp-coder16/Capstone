@@ -1,12 +1,20 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
-import pickle
-import numpy as np
+import joblib
+import pandas as pd
+import os
 
-app = FastAPI()
+from shap_explainer_xgb import get_shap_values, load_globals
+from risk_recommendations import classify_risk, get_recommendations
 
-# Load model
-model = pickle.load(open("model.pkl", "rb"))
+app = FastAPI(title="AQI Prediction with XGBoost + SHAP")
+
+# Load model & scaler at startup
+load_globals()
+
+# Load feature names
+with open("models/feature_names.txt", "r") as f:
+    FEATURE_NAMES = f.read().strip().split(",")
 
 class AQIInput(BaseModel):
     pm25: float
@@ -18,20 +26,39 @@ class AQIInput(BaseModel):
     temp: float
     humidity: float
     wind: float
+    day_of_week: int
+    month: int
 
 @app.get("/")
-def home():
-    return {"message": "ML API Running"}
+def root():
+    return {"message": "AQI Prediction with XGBoost + SHAP", "features": len(FEATURE_NAMES), "model": "xgboost"}
 
 @app.post("/predict")
 def predict(data: AQIInput):
-    features = np.array([[
-        data.pm25, data.pm10, data.no2, data.so2,
-        data.co, data.o3, data.temp, data.humidity, data.wind
-    ]])
+    try:
+        model = joblib.load("models/aqi_model_xgb.pkl")
+        scaler = joblib.load("models/scaler.pkl")
+        
+        input_dict = data.dict()
+        input_df = pd.DataFrame([input_dict], columns=FEATURE_NAMES)
+        input_scaled = scaler.transform(input_df)
+        
+        pred = model.predict(input_scaled)[0]
+        pred = float(round(pred, 2))
+        
+        risk = classify_risk(pred)
+        recommendations = get_recommendations(pred)
+        shap_vals = get_shap_values(input_dict)
+        
+        return {
+            "predicted_aqi": pred,
+            "risk": risk,
+            "recommendations": recommendations,
+            "shap_values": shap_vals
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
-    prediction = model.predict(features)
-
-    return {
-        "predicted_aqi": float(prediction[0])
-    }
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
