@@ -1,11 +1,12 @@
 const express = require("express");
 const app = express();
 
-require("dotenv").config();
-
 app.use(express.json());
 
-const authRoutes = require("./routes/authRoutes");
-app.use("/api/auth", authRoutes);
+const aqiRoutes = require("./backend/routes/aqiRoutes");
 
-module.exports = app;
+app.use("/api/aqi", aqiRoutes);
+
+app.listen(5000, () => {
+    console.log("Server running on port 5000");
+});

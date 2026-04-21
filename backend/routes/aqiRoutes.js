@@ -1,8 +1,7 @@
 const express = require("express");
 const router = express.Router();
-const { getCurrentAQI, getHistory } = require("../controllers/aqiController");
+const { getPrediction } = require("../controllers/aqiController");
 
-router.get("/current", getCurrentAQI);
-router.get("/history", getHistory);
+router.post("/predict", getPrediction);
 
 module.exports = router;
