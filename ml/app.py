@@ -37,25 +37,29 @@ def root():
 @app.post("/predict")
 def predict(data: AQIInput):
     try:
+        # 1. PRINT THE RAW INPUT
+        print("=== INCOMING DATA FROM FRONTEND ===")
+        print(data.dict())
+        print("===================================")
+
         input_dict = data.dict()
-        input_df = pd.DataFrame([input_dict], columns=FEATURE_NAMES)
+        input_df = pd.DataFrame([input_dict])
         
-        # We now use the globally loaded scaler and model
+        # 2. FORCE ORDER AND NUMBERS
+        input_df = input_df[FEATURE_NAMES]
+        input_df = input_df.apply(pd.to_numeric, errors='coerce').fillna(0)
+        
+        # 3. PRINT THE FINAL DATAFRAME BEFORE PREDICTION
+        print("=== DATA FED TO MODEL ===")
+        print(input_df)
+        print("=========================")
+
         input_scaled = scaler.transform(input_df)
         pred = model.predict(input_scaled)[0]
-        pred = float(round(pred, 2))
         
-        risk = classify_risk(pred)
-        recommendations = get_recommendations(pred)
-        shap_vals = get_shap_values(input_dict)
-        
-        return {
-            "predicted_aqi": pred,
-            "risk": risk,
-            "recommendations": recommendations,
-            "shap_values": shap_vals
-        }
+        return {"predicted_aqi": float(round(pred, 2))}
     except Exception as e:
+        print(f"CRASH: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
