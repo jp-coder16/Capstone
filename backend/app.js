@@ -7,6 +7,7 @@ const { errorHandler, notFound } = require('./middleware/errorMiddleware');
 
 const app = express();
 
+app.set('trust proxy', 1);
 // --- Global Middleware ---
 // Security headers
 app.use(helmet());

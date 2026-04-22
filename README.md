@@ -109,4 +109,4 @@ Manas Uday Wani - UI/UX & Frontend
 Arpit Yadav - DevOps & QA
 
 📄 License
-This project is licensed under the MIT License - see the LICENSE file for details.
+This project is licensed under the MIT License - see the LICENSE file for details.                        
