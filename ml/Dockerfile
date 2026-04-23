@@ -19,4 +19,4 @@ COPY . .
 EXPOSE 8000
 
 # Better startup
-CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1"]
+CMD ["python3", "app.py"]
