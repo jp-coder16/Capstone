@@ -5,7 +5,18 @@ services:
   # =========================
   # 🔥 ML SERVICE
   # =========================
- 
+  ml:
+    build: ./ml
+    container_name: ml
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 5s
+      timeout: 2s
+      retries: 5
+    restart: unless-stopped
+
   # =========================
   # 🚀 BACKEND SERVICE
   # =========================
@@ -14,7 +25,9 @@ services:
     container_name: backend
     ports:
       - "5000:5000"
-  # ✅ waits for ML properly
+    depends_on:
+      ml:
+        condition: service_healthy   # ✅ waits for ML properly
     environment:
       - ML_URL=http://ml:8000        # ✅ internal Docker networking
     restart: unless-stopped
