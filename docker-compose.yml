@@ -5,18 +5,7 @@ services:
   # =========================
   # 🔥 ML SERVICE
   # =========================
-  ml:
-    build: ./ml
-    container_name: ml
-    ports:
-      - "8000:8000"
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 5s
-      timeout: 2s
-      retries: 5
-    restart: unless-stopped
-
+ 
   # =========================
   # 🚀 BACKEND SERVICE
   # =========================
