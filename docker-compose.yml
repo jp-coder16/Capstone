@@ -14,9 +14,7 @@ services:
     container_name: backend
     ports:
       - "5000:5000"
-    depends_on:
-      ml:
-        condition: service_healthy   # ✅ waits for ML properly
+  # ✅ waits for ML properly
     environment:
       - ML_URL=http://ml:8000        # ✅ internal Docker networking
     restart: unless-stopped
