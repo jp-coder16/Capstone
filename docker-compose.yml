@@ -6,7 +6,7 @@ services:
   # 🔥 ML SERVICE
   # =========================
   ml:
-    build: ./ml-service
+    build: ./ml
     container_name: ml
     ports:
       - "8000:8000"
