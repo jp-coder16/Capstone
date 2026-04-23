@@ -1,31 +1,27 @@
 version: "3.8"
 
 services:
-  mongo:
-    image: mongo:7
-    restart: unless-stopped
-    ports:
-      - "27018:27017"
-    volumes:
-      - mongo-data:/data/db
 
-  app:
-    build: .
-    restart: unless-stopped
+  ml:
+    build: ./ml-service
+    container_name: ml
+    ports:
+      - "8000:8000"
+
+  backend:
+    build: ./backend
+    container_name: backend
+    ports:
+      - "5000:5000"
+    depends_on:
+      - ml
+    environment:
+      - ML_URL=http://ml:8000
+
+  frontend:
+    build: ./frontend
+    container_name: frontend
     ports:
       - "3000:3000"
     depends_on:
-      - mongo
-    environment:
-      PORT: 3000
-      MONGODB_URI: mongodb://mongo:27017/loginpage
-      SESSION_SECRET: ${SESSION_SECRET:-supersecret}
-      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-your-google-client-id}
-      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-your-google-client-secret}
-      GOOGLE_CALLBACK_URL: ${GOOGLE_CALLBACK_URL:-http://localhost:3000/auth/google/callback}
-    volumes:
-      - .:/app
-      - /app/node_modules
-
-volumes:
-  mongo-data:
+      - backend
