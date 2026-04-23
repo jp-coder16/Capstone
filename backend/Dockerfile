@@ -1,14 +1,13 @@
-FROM node:18
+FROM node:18-alpine
 
 WORKDIR /app
 
-# Copy ONLY dependency files first (critical for caching)
+# ---- dependencies first (cache layer) ----
 COPY package*.json ./
 
-# Install dependencies (cached layer)
-RUN npm install --no-audit --no-fund --legacy-peer-deps
+RUN npm ci --only=production
 
-# Copy rest of the code AFTER dependencies
+# ---- app code ----
 COPY . .
 
 EXPOSE 5000
