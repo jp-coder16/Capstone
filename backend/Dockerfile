@@ -2,19 +2,13 @@ FROM node:18
 
 WORKDIR /app
 
-# Improve npm stability in Docker
-RUN npm config set registry https://registry.npmjs.org/ && \
-    npm config set fetch-retries 5 && \
-    npm config set fetch-retry-mintimeout 20000 && \
-    npm config set fetch-retry-maxtimeout 120000
-
-# Copy dependencies first (better caching)
+# Copy ONLY dependency files first (critical for caching)
 COPY package*.json ./
 
-# Stable install (important fix)
+# Install dependencies (cached layer)
 RUN npm install --no-audit --no-fund --legacy-peer-deps
 
-# Copy full project
+# Copy rest of the code AFTER dependencies
 COPY . .
 
 EXPOSE 5000
