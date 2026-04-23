@@ -1,45 +1,20 @@
-version: "3.8"
-
 services:
-
-  # =========================
-  # 🔥 ML SERVICE
-  # =========================
   ml:
-    build: ./ml
-    container_name: ml
+    build:
+      context: ./ml
+      cache_from:
+        - ml-cache
     ports:
       - "8000:8000"
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 5s
-      timeout: 2s
-      retries: 5
-    restart: unless-stopped
 
-  # =========================
-  # 🚀 BACKEND SERVICE
-  # =========================
   backend:
-    build: ./backend
-    container_name: backend
+    build:
+      context: ./backend
     ports:
       - "5000:5000"
-    depends_on:
-      ml:
-        condition: service_healthy   # ✅ waits for ML properly
-    environment:
-      - ML_URL=http://ml:8000        # ✅ internal Docker networking
-    restart: unless-stopped
 
-  # =========================
-  # 🌐 FRONTEND SERVICE
-  # =========================
   frontend:
-    build: ./frontend
-    container_name: frontend
+    build:
+      context: ./frontend
     ports:
       - "3000:3000"
-    depends_on:
-      - backend
-    restart: unless-stopped
