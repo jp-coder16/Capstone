@@ -9,49 +9,55 @@ pipeline {
             }
         }
 
-        stage('Build & Deploy Containers') {
+        stage('Build & Deploy') {
             steps {
-                bat 'docker-compose down || exit 0'
-                bat 'docker-compose up -d --build'
+                bat 'docker-compose down'
+                bat 'docker-compose up --build'   // 🔥 NO -d → show logs
             }
         }
 
-        stage('Wait for Services') {
+        stage('Verify Containers') {
+            steps {
+                bat 'docker ps'
+            }
+        }
+
+        stage('Health Check (Safe)') {
             steps {
                 script {
                     bat '''
-                    echo Waiting for ML service...
+                    set count=0
+
+                    echo Checking ML service...
                     :loop1
                     curl -f http://localhost:8000/health && goto done1
                     timeout /t 2 > nul
+                    set /a count+=1
+                    if %count%==10 exit 1
                     goto loop1
                     :done1
 
-                    echo Waiting for Backend...
+                    set count=0
+                    echo Checking Backend...
                     :loop2
                     curl -f http://localhost:5000 && goto done2
                     timeout /t 2 > nul
+                    set /a count+=1
+                    if %count%==10 exit 1
                     goto loop2
                     :done2
 
-                    echo Waiting for Frontend...
+                    set count=0
+                    echo Checking Frontend...
                     :loop3
                     curl -f http://localhost:3000 && goto done3
                     timeout /t 2 > nul
+                    set /a count+=1
+                    if %count%==10 exit 1
                     goto loop3
                     :done3
                     '''
                 }
-            }
-        }
-
-        stage('Final Health Check') {
-            steps {
-                bat '''
-                curl -f http://localhost:8000/health || exit 1
-                curl -f http://localhost:5000 || exit 1
-                curl -f http://localhost:3000 || exit 1
-                '''
             }
         }
     }
@@ -61,7 +67,7 @@ pipeline {
             echo '✅ Pipeline completed successfully!'
         }
         failure {
-            echo '❌ Pipeline failed!'
+            echo '❌ Pipeline failed! Check logs above.'
         }
     }
 }
