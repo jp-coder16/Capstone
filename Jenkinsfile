@@ -1,6 +1,10 @@
 pipeline {
     agent any
 
+    environment {
+        DOCKER_BUILDKIT = '1'
+    }
+
     stages {
 
         stage('Checkout') {
@@ -9,10 +13,54 @@ pipeline {
             }
         }
 
-        stage('Build & Deploy') {
+        stage('Build Images (Parallel)') {
+            parallel {
+
+                stage('Backend Build') {
+                    steps {
+                        bat 'docker build -t cap-backend ./backend'
+                    }
+                }
+
+                stage('Frontend Build') {
+                    steps {
+                        bat 'docker build -t cap-frontend ./frontend'
+                    }
+                }
+
+                stage('ML Build') {
+                    steps {
+                        bat 'docker build -t cap-ml ./ml'
+                    }
+                }
+            }
+        }
+
+        stage('Deploy Containers') {
             steps {
                 bat 'docker-compose down'
-                bat 'docker-compose up --build'   // 🔥 NO -d → show logs
+                bat 'docker-compose up -d --force-recreate'
+            }
+        }
+
+        stage('Wait for Services') {
+            steps {
+                bat 'timeout /t 15'
+            }
+        }
+
+        stage('Health Check') {
+            steps {
+                bat '''
+                echo Checking ML...
+                curl -f http://localhost:8000/health || exit 1
+
+                echo Checking Backend...
+                curl -f http://localhost:5000 || exit 1
+
+                echo Checking Frontend...
+                curl -f http://localhost:3000 || exit 1
+                '''
             }
         }
 
@@ -21,53 +69,17 @@ pipeline {
                 bat 'docker ps'
             }
         }
-
-        stage('Health Check (Safe)') {
-            steps {
-                script {
-                    bat '''
-                    set count=0
-
-                    echo Checking ML service...
-                    :loop1
-                    curl -f http://localhost:8000/health && goto done1
-                    timeout /t 2 > nul
-                    set /a count+=1
-                    if %count%==10 exit 1
-                    goto loop1
-                    :done1
-
-                    set count=0
-                    echo Checking Backend...
-                    :loop2
-                    curl -f http://localhost:5000 && goto done2
-                    timeout /t 2 > nul
-                    set /a count+=1
-                    if %count%==10 exit 1
-                    goto loop2
-                    :done2
-
-                    set count=0
-                    echo Checking Frontend...
-                    :loop3
-                    curl -f http://localhost:3000 && goto done3
-                    timeout /t 2 > nul
-                    set /a count+=1
-                    if %count%==10 exit 1
-                    goto loop3
-                    :done3
-                    '''
-                }
-            }
-        }
     }
 
     post {
         success {
             echo '✅ Pipeline completed successfully!'
         }
+
         failure {
-            echo '❌ Pipeline failed! Check logs above.'
+            echo '❌ Pipeline failed!'
+            bat 'docker logs ml || true'
+            bat 'docker logs backend || true'
         }
     }
 }
