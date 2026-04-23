@@ -9,33 +9,59 @@ pipeline {
             }
         }
 
-        stage('Setup Environment') {
-            steps {
-                bat 'npm install'
-            }
-        }
-
-        stage('Build & Deploy') {
+        stage('Build & Deploy Containers') {
             steps {
                 bat 'docker-compose down || exit 0'
                 bat 'docker-compose up -d --build'
             }
         }
 
-        stage('Health Check') {
+        stage('Wait for Services') {
             steps {
-                bat 'ping 127.0.0.1 -n 11 > nul'
-                bat 'curl -f http://localhost:3000/health || exit 1'
+                script {
+                    bat '''
+                    echo Waiting for ML service...
+                    :loop1
+                    curl -f http://localhost:8000/health && goto done1
+                    timeout /t 2 > nul
+                    goto loop1
+                    :done1
+
+                    echo Waiting for Backend...
+                    :loop2
+                    curl -f http://localhost:5000 && goto done2
+                    timeout /t 2 > nul
+                    goto loop2
+                    :done2
+
+                    echo Waiting for Frontend...
+                    :loop3
+                    curl -f http://localhost:3000 && goto done3
+                    timeout /t 2 > nul
+                    goto loop3
+                    :done3
+                    '''
+                }
+            }
+        }
+
+        stage('Final Health Check') {
+            steps {
+                bat '''
+                curl -f http://localhost:8000/health || exit 1
+                curl -f http://localhost:5000 || exit 1
+                curl -f http://localhost:3000 || exit 1
+                '''
             }
         }
     }
 
     post {
         success {
-            echo 'Pipeline completed successfully!'
+            echo '✅ Pipeline completed successfully!'
         }
         failure {
-            echo 'Pipeline failed!'
+            echo '❌ Pipeline failed!'
         }
     }
 }
