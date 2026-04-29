@@ -23,7 +23,8 @@ pipeline {
 
         stage('Wait for Services') {
             steps {
-                bat 'timeout /t 15'
+                // Safe Windows delay (replaces timeout)
+                bat 'ping 127.0.0.1 -n 16 > nul'
             }
         }
 
@@ -51,13 +52,16 @@ pipeline {
 
     post {
         success {
-            echo '✅ Deployment successful'
+            echo '✅ Pipeline completed successfully!'
         }
 
         failure {
             echo '❌ Pipeline failed'
-            bat 'docker logs ml || exit 0'
-            bat 'docker logs backend || exit 0'
+
+            // FIXED container names from docker-compose
+            bat 'docker logs capstone-ml-1 || exit 0'
+            bat 'docker logs capstone-backend-1 || exit 0'
+            bat 'docker logs capstone-frontend-1 || exit 0'
         }
     }
 }
