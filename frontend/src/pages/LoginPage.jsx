@@ -176,7 +176,7 @@ export default function LoginPage() {
                 color: 'var(--text-secondary)', fontSize: 13, cursor: 'pointer',
                 transition: 'var(--transition)'
               }}
-            >👤 Regular User</button>
+            >👤 Common  User</button>
             <button
               onClick={() => { setEmail('admin@demo.com'); setPassword('admin123') }}
               style={{
