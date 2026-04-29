@@ -11,11 +11,11 @@ pipeline {
 
         stage('Deploy Containers') {
             steps {
-                sh '''
-                echo "Stopping old containers..."
-                docker compose down || true
+                bat '''
+                echo Stopping old containers...
+                docker compose down || exit 0
 
-                echo "Starting containers (NO rebuild)..."
+                echo Starting containers...
                 docker compose up -d
                 '''
             }
@@ -23,20 +23,20 @@ pipeline {
 
         stage('Wait for Services') {
             steps {
-                sh 'sleep 15'
+                bat 'timeout /t 15'
             }
         }
 
         stage('Health Check') {
             steps {
-                sh '''
-                echo "Checking ML service..."
+                bat '''
+                echo Checking ML service...
                 curl -f http://localhost:8000/health || exit 1
 
-                echo "Checking Backend..."
+                echo Checking Backend...
                 curl -f http://localhost:5000 || exit 1
 
-                echo "Checking Frontend..."
+                echo Checking Frontend...
                 curl -f http://localhost:3000 || exit 1
                 '''
             }
@@ -44,20 +44,20 @@ pipeline {
 
         stage('Verify Containers') {
             steps {
-                sh 'docker ps'
+                bat 'docker ps'
             }
         }
     }
 
     post {
         success {
-            echo '✅ Deployment successful (no rebuild performed)'
+            echo '✅ Deployment successful'
         }
 
         failure {
-            echo '❌ Pipeline failed!'
-            sh 'docker logs ml || true'
-            sh 'docker logs backend || true'
+            echo '❌ Pipeline failed'
+            bat 'docker logs ml || exit 0'
+            bat 'docker logs backend || exit 0'
         }
     }
 }
