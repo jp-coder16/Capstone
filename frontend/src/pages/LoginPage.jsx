@@ -185,7 +185,7 @@ export default function LoginPage() {
                 color: 'var(--text-secondary)', fontSize: 13, cursor: 'pointer',
                 transition: 'var(--transition)'
               }}
-            >🔧 Admin click here </button>
+            >🔧 Admin click this button </button>
           </div>
         </div>
 
